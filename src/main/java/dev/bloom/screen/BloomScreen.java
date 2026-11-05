@@ -19,6 +19,7 @@ import java.util.List;
 
 /** The Bloom menu. Drawn entirely with the Bloom theme so the Theme tab restyles all of it. */
 public class BloomScreen extends Screen {
+    private static final int VW = 470, VH = 290;
     private static final String[] TABS = { "Modules", "Theme", "Lyrics" };
     private static final String[] CATS = { "All", "HUD", "Utility", "Music" };
 
@@ -32,6 +33,8 @@ public class BloomScreen extends Screen {
     private boolean hexFocus;
     private String hex = "";
     private List<String> songs = new ArrayList<>();
+    private final Input.Edges ed = new Input.Edges();
+    private final long openedAt = System.nanoTime();
 
     public BloomScreen() {
         super(Component.literal("Bloom Client"));
@@ -54,11 +57,38 @@ public class BloomScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        Input.poll();
-        boolean click = Input.pressed(0), rclick = Input.pressed(1), down = Input.down(0);
-        int pw = Math.min(width - 16, 470), ph = Math.min(height - 16, 290);
-        int px = (width - pw) / 2, py = (height - ph) / 2;
+        ed.update();
+        boolean click = ed.pressed(0), rclick = ed.pressed(1), down = ed.down(0);
 
+        // The menu floats in the middle of the game at about 60% of the screen and grows in when opened.
+        float age = Math.min(1f, (System.nanoTime() - openedAt) / 280_000_000f);
+        float ease = 1f - (1f - age) * (1f - age) * (1f - age);
+        float fs = Math.max(0.5f, Math.min(1f, Math.min(width * 0.62f / VW, height * 0.68f / VH)));
+        float sc = fs * (0.8f + 0.2f * ease);
+        double t = System.nanoTime() / 1.0e9;
+        float bob = (float) Math.sin(t * 1.4) * 0.8f * fs;
+        float ox = (width - VW * sc) / 2f, oy = (height - VH * sc) / 2f + bob;
+        int vmx = Math.round((mx - ox) / sc), vmy = Math.round((my - oy) / sc);
+
+        var m = g.pose();
+        m.pushMatrix();
+        m.translate(ox, oy);
+        m.scale(sc, sc);
+        try {
+            drawMenu(g, vmx, vmy, click, rclick, down);
+        } finally {
+            m.popMatrix();
+        }
+    }
+
+    private void drawMenu(GuiGraphics g, int mx, int my, boolean click, boolean rclick, boolean down) {
+        int pw = VW, ph = VH, px = 0, py = 0;
+
+        // soft glow around the panel (hollow rings, so nothing overlaps the panel itself)
+        int glowRgb = Theme.glass ? 0xBFEAFF : Theme.accent;
+        for (int k = 1; k <= 5; k++) {
+            Ui.ring(g, px - k, py - k, pw + 2 * k, ph + 2 * k, Theme.radius + 3 + k, Theme.argb(0x30 - k * 6, glowRgb), 1);
+        }
         Ui.panel(g, px, py, pw, ph, Theme.radius + 3);
         if (Theme.glass) Ui.bubbles(g, px, py, pw, ph);
         Ui.text(g, "Bloom", px + 12, py + 9, Theme.ACCENT);
@@ -86,7 +116,6 @@ public class BloomScreen extends Screen {
             case 1: drawTheme(g, mx, my, click, rclick, down, cx, cy, cw, ch); break;
             default: drawLyrics(g, mx, my, click, cx, cy, cw, ch); break;
         }
-        Ui.textFlat(g, "Open with your Bloom key (default: Right Shift)", px + 8, py + ph - 12, Theme.withAlpha(Theme.MUTED, 0xA0));
     }
 
     // ------------------------------------------------------------------ modules tab
@@ -262,11 +291,11 @@ public class BloomScreen extends Screen {
 
     private void typeHex() {
         for (int k = GLFW.GLFW_KEY_0; k <= GLFW.GLFW_KEY_9; k++)
-            if (Input.keyPressed(k) && hex.length() < 6) hex += (char) k;
+            if (ed.keyPressed(k) && hex.length() < 6) hex += (char) k;
         for (int k = GLFW.GLFW_KEY_A; k <= GLFW.GLFW_KEY_F; k++)
-            if (Input.keyPressed(k) && hex.length() < 6) hex += (char) k;
-        if (Input.keyPressed(GLFW.GLFW_KEY_BACKSPACE) && !hex.isEmpty()) hex = hex.substring(0, hex.length() - 1);
-        if (hex.length() == 6 || (Input.keyPressed(GLFW.GLFW_KEY_ENTER) && !hex.isEmpty())) {
+            if (ed.keyPressed(k) && hex.length() < 6) hex += (char) k;
+        if (ed.keyPressed(GLFW.GLFW_KEY_BACKSPACE) && !hex.isEmpty()) hex = hex.substring(0, hex.length() - 1);
+        if (hex.length() == 6 || (ed.keyPressed(GLFW.GLFW_KEY_ENTER) && !hex.isEmpty())) {
             try {
                 Theme.setAccent(Integer.parseInt(hex, 16));
             } catch (NumberFormatException ignored) { }

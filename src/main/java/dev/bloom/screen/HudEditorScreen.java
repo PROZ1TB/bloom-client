@@ -17,6 +17,7 @@ public class HudEditorScreen extends Screen {
     private final Screen parent;
     private HudModule drag;
     private int offX, offY;
+    private final Input.Edges ed = new Input.Edges();
 
     public HudEditorScreen(Screen parent) {
         super(Component.literal("HUD Editor"));
@@ -34,17 +35,17 @@ public class HudEditorScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        Input.poll();
+        ed.update();
         g.fill(0, 0, width, height, Theme.argb(0x40, 0x000000));
         Ui.centered(g, "HUD Editor: drag the boxes. Esc to go back.", width / 2, 8, Theme.TITLE);
 
-        if (drag != null && !Input.down(0)) {
+        if (drag != null && !ed.down(0)) {
             drag = null;
             Config.save();
         }
         if (drag != null) drag.dragTo(mx - offX, my - offY, width, height);
 
-        boolean click = Input.pressed(0);
+        boolean click = ed.pressed(0);
         HudModule hit = null;
         for (Module m : ModuleManager.all()) {
             if (!m.enabled || !(m instanceof HudModule h) || h.lastW <= 0) continue;
