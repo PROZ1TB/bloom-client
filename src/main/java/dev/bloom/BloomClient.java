@@ -14,11 +14,28 @@ import org.lwjgl.glfw.GLFW;
 public final class BloomClient implements ClientModInitializer {
     private static KeyMapping menuKey;
 
+    /** Optional groups are loaded by name: if one was left out of the build or fails, the rest still works. */
+    private static void loadGroup(String cls) {
+        try {
+            ((Group) Class.forName(cls).getDeclaredConstructor().newInstance()).init();
+            System.out.println("[Bloom] loaded " + cls);
+        } catch (ClassNotFoundException e) {
+            System.out.println("[Bloom] not included in this build: " + cls);
+        } catch (Throwable t) {
+            System.out.println("[Bloom] could not start " + cls + ": " + t);
+        }
+    }
+
     @Override
     public void onInitializeClient() {
         Config.load();
         Theme.load();
         ModuleManager.init();
+        for (String cls : new String[] {
+                "dev.bloom.risky.sky.SkyGroup", "dev.bloom.risky.glow.GlowGroup",
+                "dev.bloom.risky.skin.SkinGroup", "dev.bloom.risky.menu.MenuGroup" }) {
+            loadGroup(cls);
+        }
 
         var hudId = VanillaHudElements.MISC_OVERLAYS.withPath("bloom_hud");
         HudElementRegistry.attachElementAfter(VanillaHudElements.MISC_OVERLAYS, hudId,

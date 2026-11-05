@@ -8,6 +8,7 @@ import dev.bloom.module.ModuleManager;
 import dev.bloom.module.Setting;
 import dev.bloom.ui.Input;
 import dev.bloom.ui.Ui;
+import dev.bloom.visual.SkyArt;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -21,7 +22,7 @@ import java.util.List;
 public class BloomScreen extends Screen {
     private static final int VW = 470, VH = 290;
     private static final String[] TABS = { "Modules", "Theme", "Lyrics" };
-    private static final String[] CATS = { "All", "HUD", "Utility", "Music" };
+    private static final String[] CATS = { "All", "HUD", "Visual", "Utility", "Music" };
 
     private int tab;
     private String cat = "All";
@@ -36,9 +37,20 @@ public class BloomScreen extends Screen {
     private final Input.Edges ed = new Input.Edges();
     private final long openedAt = System.nanoTime();
 
-    public BloomScreen() {
+    private final Screen parent;
+
+    public BloomScreen() { this(null); }
+
+    public BloomScreen(Screen parent) {
         super(Component.literal("Bloom Client"));
+        this.parent = parent;
         songs = LyricsEngine.list();
+    }
+
+    @Override
+    public void onClose() {
+        Config.save();
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override public boolean isPauseScreen() { return false; }
@@ -67,7 +79,7 @@ public class BloomScreen extends Screen {
         float sc = fs * (0.8f + 0.2f * ease);
         double t = System.nanoTime() / 1.0e9;
         float bob = (float) Math.sin(t * 1.4) * 0.8f * fs;
-        float ox = (width - VW * sc) / 2f, oy = (height - VH * sc) / 2f + bob;
+        float ox = (width - VW * sc) / 2f - (mx - width / 2f) * 0.012f, oy = (height - VH * sc) / 2f + bob - (my - height / 2f) * 0.012f;
         int vmx = Math.round((mx - ox) / sc), vmy = Math.round((my - oy) / sc);
 
         var m = g.pose();
@@ -287,6 +299,18 @@ public class BloomScreen extends Screen {
         Ui.textFlat(g, Integer.toString(Theme.radius), tx + tw + 8, y + 1, Theme.MUTED);
         if (click && Ui.in(mx, my, tx - 3, y - 2, tw + 6, 13)) dragRadius = true;
         if (dragRadius && down) Theme.setRadius(2 + (int) Math.round(Math.max(0, Math.min(1, (mx - tx) / (double) tw)) * 10));
+
+        y += 24;
+        Ui.text(g, "Custom main menu", cx, y + 1, Theme.TEXT);
+        boolean menuOn = Config.getBool("menu.enabled", true);
+        Ui.toggle(g, cx + 110, y, menuOn);
+        if (click && Ui.in(mx, my, cx + 106, y - 3, 30, 17)) Config.put("menu.enabled", Boolean.toString(!menuOn));
+        y += 22;
+        Ui.text(g, "Menu sky", cx, y + 3, Theme.TEXT);
+        int sk = Math.floorMod((int) Config.getDouble("menu.sky", 0), SkyArt.STYLES.length);
+        boolean skh = Ui.in(mx, my, cx + 110, y, 80, 16);
+        Ui.button(g, cx + 110, y, 80, 16, SkyArt.STYLES[sk], skh);
+        if (click && skh) Config.put("menu.sky", Integer.toString((sk + 1) % SkyArt.STYLES.length));
     }
 
     private void typeHex() {

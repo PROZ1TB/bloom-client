@@ -33,6 +33,9 @@ public final class ModuleManager {
         MODULES.add(new LyricsModule());
     }
 
+    /** Adds a module from an optional feature group. */
+    public static void register(Module m) { MODULES.add(m); }
+
     public static List<Module> all() { return Collections.unmodifiableList(MODULES); }
 
     public static void tick(Minecraft mc) {
