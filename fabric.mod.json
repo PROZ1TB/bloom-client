@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "bloomclient",
+  "version": "${version}",
+  "name": "Bloom Client",
+  "description": "Bloom Client: a themeable client GUI with a Glass color, HUD modules, and Lyrics in the Air.",
+  "authors": ["Bloom"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.bloom.BloomClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
