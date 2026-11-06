@@ -56,6 +56,7 @@ public class BloomTitleScreen extends Screen {
 
     private void draw(GuiGraphics g, int mx, int my) {
         ed.update();
+        Ui.beginFrame();
         boolean click = ed.pressed(0);
         Minecraft mc = Minecraft.getInstance();
         double t = (System.nanoTime() - opened) / 1.0e9;
@@ -76,7 +77,7 @@ public class BloomTitleScreen extends Screen {
             int y0 = hy + (h - hy) * i / slices, y1 = hy + (h - hy) * (i + 1) / slices;
             g.fill(0, y0, w, y1, 0xFF000000 | mixRgb(gTop, gBot, (i + 0.5) / slices));
         }
-        SkyArt.draw(g, w, h, t * 2.5, pitch, fov, style, 1.0, t, true, true, true, Theme.accent);
+        SkyArt.draw(g, w, h, t * 2.5, pitch, fov, style, 1.0, t, true, true, true, Theme.accent, 1);
 
         // character walks in from the left, then looks at the mouse
         int u = Math.max(2, Math.round(h / 80f));

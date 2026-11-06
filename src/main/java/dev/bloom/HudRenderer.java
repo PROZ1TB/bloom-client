@@ -5,6 +5,7 @@ import dev.bloom.module.Module;
 import dev.bloom.module.ModuleManager;
 import dev.bloom.module.Overlay;
 import dev.bloom.ui.Input;
+import dev.bloom.ui.Ui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -19,6 +20,7 @@ public final class HudRenderer {
     public static void render(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         Input.poll();
+        Ui.beginFrame();
         frames++;
         long now = System.nanoTime();
         if (now - windowStart >= 1_000_000_000L) {

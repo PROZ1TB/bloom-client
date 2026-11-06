@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.bloom.risky.ui",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "AbstractButtonMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

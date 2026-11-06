@@ -99,8 +99,19 @@ public final class SkyArt {
 
     // ------------------------------------------------------------------ main entry
 
+    /** Detail 0 = low (fewest rects, best FPS), 1 = medium, 2 = high. */
+    public static final String[] DETAILS = { "Low", "Medium", "High" };
+    private static final int[] COLS = { 36, 60, 100 }, SLICES = { 3, 4, 6 }, STAR_N = { 80, 150, 240 };
+    private static final int[] NEB_COLS = { 22, 34, 50 }, VEIL_SLICES = { 6, 8, 12 }, SWIRL_PTS = { 36, 56, 90 }, SWIRL_LINES = { 6, 8, 9 };
+
     public static void draw(GuiGraphics g, int gw, int gh, double yawDeg, double pitchDeg, double fovDeg,
                             int style, double intensity, double time, boolean stars, boolean glow, boolean veil, int accentRgb) {
+        draw(g, gw, gh, yawDeg, pitchDeg, fovDeg, style, intensity, time, stars, glow, veil, accentRgb, 1);
+    }
+
+    public static void draw(GuiGraphics g, int gw, int gh, double yawDeg, double pitchDeg, double fovDeg,
+                            int style, double intensity, double time, boolean stars, boolean glow, boolean veil, int accentRgb, int detail) {
+        detail = Math.max(0, Math.min(2, detail));
         style = Math.max(0, Math.min(STYLES.length - 1, style));
         intensity = Math.max(0.05, Math.min(1.5, intensity));
         Cam cam = new Cam(gw, gh, yawDeg, pitchDeg, fovDeg);
@@ -118,7 +129,7 @@ public final class SkyArt {
         // darkened sky tint above the horizon
         if (veil) {
             double veilStrength = style == 2 ? 0.62 : style == 3 ? 0.34 : 0.45;
-            int slices = 12;
+            int slices = VEIL_SLICES[detail];
             int y0 = 0;
             for (int i = 0; i < slices; i++) {
                 int y1 = (int) Math.round(horizon * (i + 1) / (double) slices);
@@ -130,13 +141,13 @@ public final class SkyArt {
             }
         }
 
-        if (stars) drawStars(g, cam, time, intensity);
+        if (stars) drawStars(g, cam, time, intensity, detail);
 
         switch (style) {
-            case 1: drawNebula(g, cam, yawDeg, time, intensity, top, bottom); break;
-            case 2: drawSwirl(g, cam, time, intensity); break;
+            case 1: drawNebula(g, cam, yawDeg, time, intensity, top, bottom, detail); break;
+            case 2: drawSwirl(g, cam, time, intensity, detail); break;
             case 4: drawSunset(g, cam, horizon, intensity, time); break;
-            default: drawCurtains(g, cam, yawDeg, time, intensity, top, bottom, style == 3); break;
+            default: drawCurtains(g, cam, yawDeg, time, intensity, top, bottom, style == 3, detail); break;
         }
 
         if (glow) {
@@ -148,8 +159,10 @@ public final class SkyArt {
         }
     }
 
-    private static void drawStars(GuiGraphics g, Cam cam, double time, double intensity) {
-        for (double[] s : STARS) {
+    private static void drawStars(GuiGraphics g, Cam cam, double time, double intensity, int detail) {
+        int n = Math.min(STARS.length, STAR_N[detail]);
+        for (int si = 0; si < n; si++) {
+            double[] s = STARS[si];
             double[] p = cam.projectVec(s[0], s[1], s[2]);
             if (p == null) continue;
             if (p[0] < 0 || p[1] < 0 || p[0] >= cam.gw || p[1] >= cam.gh) continue;
@@ -160,10 +173,10 @@ public final class SkyArt {
 
     /** Vertical light curtains (aurora and golden). */
     private static void drawCurtains(GuiGraphics g, Cam cam, double yaw, double time, double intensity,
-                                     int top, int bottom, boolean wide) {
+                                     int top, int bottom, boolean wide, int detail) {
         double hfov = Math.toDegrees(2 * Math.atan(cam.tanHalf * cam.aspect));
         double range = hfov * 0.8;
-        double step = Math.max(1.0, range * 2 / 100.0);
+        double step = Math.max(1.0, range * 2 / COLS[detail]);
         for (double az = yaw - range; az <= yaw + range; az += step) {
             double s1 = Math.sin(az * 0.06 + time * 0.15);
             double s2 = Math.sin(az * 0.15 - time * 0.22);
@@ -179,7 +192,7 @@ public final class SkyArt {
             if (a == null || b == null || yt == null || yb == null) continue;
             double x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]);
             if (x1 - x0 < 1) x1 = x0 + 1;
-            int slices = 6;
+            int slices = SLICES[detail];
             for (int k = 0; k < slices; k++) {
                 double f0 = k / (double) slices, f1 = (k + 1) / (double) slices;
                 double ya = yt[1] + (yb[1] - yt[1]) * f0, yb2 = yt[1] + (yb[1] - yt[1]) * f1;
@@ -190,10 +203,10 @@ public final class SkyArt {
         }
     }
 
-    private static void drawNebula(GuiGraphics g, Cam cam, double yaw, double time, double intensity, int top, int bottom) {
+    private static void drawNebula(GuiGraphics g, Cam cam, double yaw, double time, double intensity, int top, int bottom, int detail) {
         double hfov = Math.toDegrees(2 * Math.atan(cam.tanHalf * cam.aspect));
         double range = hfov * 0.8;
-        double step = Math.max(2.0, range * 2 / 50.0);
+        double step = Math.max(2.0, range * 2 / NEB_COLS[detail]);
         for (double az = yaw - range; az <= yaw + range; az += step) {
             double n = 0.5 + 0.5 * Math.sin(az * 0.045 + time * 0.07) * Math.sin(az * 0.021 - time * 0.05 + 1.3);
             double e0 = 4 + 10 * Math.sin(az * 0.03 + time * 0.05);
@@ -205,7 +218,7 @@ public final class SkyArt {
             if (a == null || b == null || yt == null || yb == null) continue;
             double x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]);
             if (x1 - x0 < 1) x1 = x0 + 1;
-            int slices = 7;
+            int slices = Math.max(3, SLICES[detail] + 1);
             for (int k = 0; k < slices; k++) {
                 double f0 = k / (double) slices, f1 = (k + 1) / (double) slices, mid = (f0 + f1) / 2;
                 double ya = yt[1] + (yb[1] - yt[1]) * f0, yb2 = yt[1] + (yb[1] - yt[1]) * f1;
@@ -217,22 +230,19 @@ public final class SkyArt {
     }
 
     /** Thin white swirling lines on a black sky. */
-    private static void drawSwirl(GuiGraphics g, Cam cam, double time, double intensity) {
-        for (int k = 0; k < 9; k++) {
-            double prevX = Double.NaN, prevY = Double.NaN;
-            for (int j = 0; j <= 90; j++) {
-                double s = j / 90.0;
+    private static void drawSwirl(GuiGraphics g, Cam cam, double time, double intensity, int detail) {
+        int pts = SWIRL_PTS[detail];
+        for (int k = 0; k < SWIRL_LINES[detail]; k++) {
+            for (int j = 0; j <= pts; j++) {
+                double s = j / (double) pts;
                 double az = k * 40 + 70 * Math.sin(s * 2.6 + k * 1.7 + time * 0.10);
                 double el = 4 + 72 * s + 10 * Math.sin(s * 7 + k + time * 0.2);
                 double[] p = cam.project(az, el);
-                if (p == null) { prevX = Double.NaN; continue; }
+                if (p == null) continue;
                 double edge = Math.sin(Math.PI * s);
                 double a = 230 * intensity * Math.pow(edge, 0.6);
-                double w = 1.0 + 1.4 * edge;
-                box(g, cam.gw, cam.gh, p[0] - 1, p[1] - 1, p[0] + w + 1, p[1] + w + 1, alpha(a * 0.22, 0xFFFFFF));
+                double w = 1.2 + 1.6 * edge;
                 box(g, cam.gw, cam.gh, p[0], p[1], p[0] + w, p[1] + w, alpha(a, 0xFFFFFF));
-                prevX = p[0];
-                prevY = p[1];
             }
         }
     }

@@ -16,6 +16,11 @@ import java.util.List;
  */
 public final class Ui {
     private static final HashMap<Long, int[]> CACHE = new HashMap<>();
+    /** Rects drawn this frame; past the budget every shape drops to the cheapest quality. */
+    private static int budget;
+    private static final int BUDGET_LIMIT = 1400;
+    /** 0 = automatic. Set to 1 temporarily to draw decorations as cheaply as possible. */
+    private static int forceSamples;
 
     private Ui() { }
 
@@ -60,15 +65,36 @@ public final class Ui {
         draw(g, x, y, w, h, r, 0, color, px);
     }
 
-    private static int samples() {
+    /** Call once at the start of every frame that draws Bloom shapes. */
+    public static void beginFrame() { budget = 0; }
+
+    /**
+     * How finely corners are sampled: 1 = whole GUI pixels (cheap), 2 = half pixels (smooth).
+     * Every rounded shape is many small rects and Minecraft slows down quickly as the rect
+     * count per frame grows, so small or lightly rounded shapes stay at 1.
+     */
+    /** Same as {@link #ring} but always at the cheapest quality (for decorations). */
+    public static void ringCheap(GuiGraphics g, int x, int y, int w, int h, int r, int color, int px) {
+        forceSamples = 1;
+        try {
+            draw(g, x, y, w, h, r, 0, color, px);
+        } finally {
+            forceSamples = 0;
+        }
+    }
+
+    private static int samples(int w, int h, int r) {
+        if (forceSamples > 0) return forceSamples;
+        if (r < 4 || Math.min(w, h) < 8 || budget > BUDGET_LIMIT) return 1;
         double s = Minecraft.getInstance().getWindow().getGuiScale();
-        return (int) Math.max(1, Math.min(4, Math.floor(s + 0.01)));
+        return (int) Math.max(1, Math.min(2, Math.floor(s + 0.01)));
     }
 
     private static void draw(GuiGraphics g, int x, int y, int w, int h, int r, int fill, int border, int bw) {
         if (w <= 0 || h <= 0) return;
-        int s = samples();
+        int s = samples(w, h, r);
         int[] p = pieces(w * s, h * s, Math.max(0, Math.min(r, Math.min(w, h) / 2)) * s, bw * s, s);
+        budget += p.length / 5;
         var m = g.pose();
         if (s > 1) {
             m.pushMatrix();
@@ -195,52 +221,81 @@ public final class Ui {
     }
 
     public static void button(GuiGraphics g, int x, int y, int w, int h, String label, boolean hover) {
-        rrect(g, x, y, w, h, Math.max(2, Theme.radius - 1), hover ? Theme.BTN_HOVER : Theme.BTN);
-        if (Theme.glass) ring(g, x, y, w, h, Math.max(2, Theme.radius - 1), Theme.argb(hover ? 0xC0 : 0x80, 0xFFFFFF), 1);
-        centered(g, label, x + w / 2, y + (h - 8) / 2, Theme.TEXT);
+        styledButton(g, x, y, w, h, label, hover, true);
     }
 
     public static void toggle(GuiGraphics g, int x, int y, boolean on) {
-        rrect(g, x, y, 22, 11, 5, on ? Theme.ACCENT : Theme.argb(0x90, 0x202030));
-        if (Theme.glass) ring(g, x, y, 22, 11, 5, Theme.argb(0xA0, 0xFFFFFF), 1);
-        int kx = on ? x + 12 : x + 1;
-        rrect(g, kx, y + 1, 9, 9, 4, on && Theme.glass ? 0xFFFFFFFF : 0xFFF2F2F8);
+        forceSamples = 1;
+        try {
+            rrect(g, x, y, 22, 11, 5, on ? Theme.ACCENT : Theme.argb(0x90, 0x202030));
+            if (Theme.glass) ring(g, x, y, 22, 11, 5, Theme.argb(0xA0, 0xFFFFFF), 1);
+            int kx = on ? x + 12 : x + 1;
+            rrect(g, kx, y + 1, 9, 9, 4, on && Theme.glass ? 0xFFFFFFFF : 0xFFF2F2F8);
+        } finally {
+            forceSamples = 0;
+        }
     }
 
     public static void slider(GuiGraphics g, int x, int y, int w, double frac) {
-        rrect(g, x, y + 3, w, 4, 2, Theme.argb(0x90, 0x202030));
-        int fw = (int) Math.round(Math.max(0, Math.min(1, frac)) * w);
-        if (fw > 0) rrect(g, x, y + 3, Math.max(2, fw), 4, 2, Theme.ACCENT);
-        rrect(g, x + Math.max(0, Math.min(w - 6, fw - 3)), y + 1, 6, 8, 3, 0xFFFFFFFF);
+        forceSamples = 1;
+        try {
+            rrect(g, x, y + 3, w, 4, 2, Theme.argb(0x90, 0x202030));
+            int fw = (int) Math.round(Math.max(0, Math.min(1, frac)) * w);
+            if (fw > 0) rrect(g, x, y + 3, Math.max(2, fw), 4, 2, Theme.ACCENT);
+            rrect(g, x + Math.max(0, Math.min(w - 6, fw - 3)), y + 1, 6, 8, 3, 0xFFFFFFFF);
+        } finally {
+            forceSamples = 0;
+        }
+    }
+
+    /** A button in the Bloom theme with an enabled/disabled look. Used for the menu and for vanilla buttons. */
+    public static void styledButton(GuiGraphics g, int x, int y, int w, int h, String label, boolean hover, boolean active) {
+        int r = Math.max(2, Math.min(Theme.radius, h / 2));
+        int fill = !active ? Theme.withAlpha(Theme.BTN, 0x55) : hover ? Theme.BTN_HOVER : Theme.BTN;
+        rrect(g, x, y, w, h, r, fill);
+        if (Theme.glass) ring(g, x, y, w, h, r, Theme.argb(!active ? 0x40 : hover ? 0xC8 : 0x80, 0xFFFFFF), 1);
+        else if (hover && active) ring(g, x, y, w, h, r, Theme.argb(0xE0, 0xFFFFFF), 1);
+        String text = fit(label, Math.max(4, w - 8));
+        int col = !active ? Theme.withAlpha(Theme.MUTED, 0x90) : Theme.TEXT;
+        centered(g, text, x + w / 2, y + (h - 8) / 2, col);
     }
 
     /** Background behind a HUD module. */
     public static void hudBg(GuiGraphics g, int x, int y, int w, int h) {
-        int r = Math.max(2, Math.min(Theme.radius, 5));
-        if (Theme.glass) {
-            rrect(g, x, y, w, h, r, Theme.argb(0x34, 0xDDF2FF));
-            ring(g, x, y, w, h, r, Theme.argb(0xB0, 0xFFFFFF), 1);
-        } else {
-            rrect(g, x, y, w, h, r, Theme.argb(0x9A, 0x000000 | (Theme.PANEL & 0xFFFFFF)), Theme.argb(0xC0, Theme.accent), 1);
+        int r = Math.max(2, Math.min(Theme.radius, 4));
+        forceSamples = 1;
+        try {
+            if (Theme.glass) {
+                rrect(g, x, y, w, h, r, Theme.argb(0x34, 0xDDF2FF));
+                ring(g, x, y, w, h, r, Theme.argb(0xB0, 0xFFFFFF), 1);
+            } else {
+                rrect(g, x, y, w, h, r, Theme.argb(0x9A, 0x000000 | (Theme.PANEL & 0xFFFFFF)), Theme.argb(0xC0, Theme.accent), 1);
+            }
+        } finally {
+            forceSamples = 0;
         }
     }
 
-    /** Slow rising bubbles inside a box (glass theme decoration). */
+    /** Slow rising bubbles inside a box (glass theme decoration). Kept very cheap on purpose. */
     public static void bubbles(GuiGraphics g, int x, int y, int w, int h) {
         if (w < 40 || h < 40) return;
         double t = System.nanoTime() / 1.0e9;
-        for (int i = 0; i < 14; i++) {
-            long seed = i * 2654435761L;
-            double fx = ((seed >> 3) & 1023) / 1023.0;
-            int size = 5 + (int) ((seed >> 13) & 7) * 2;
-            double speed = 6 + ((seed >> 7) & 15);
-            double cycle = h + size * 2;
-            double yy = cycle - ((t * speed + ((seed >> 17) & 255)) % cycle);
-            int bx = x + 4 + (int) (fx * (w - size - 8)) + (int) (Math.sin(t * 0.8 + i) * 3);
-            int by = y + (int) yy - size;
-            if (by < y + 1 || by + size > y + h - 1) continue;
-            rrect(g, bx, by, size, size, size / 2, Theme.argb(0x16, 0xFFFFFF), Theme.argb(0x70, 0xFFFFFF), 1);
-            rrect(g, bx + 1, by + 1, Math.max(2, size / 3), Math.max(2, size / 3), 1, Theme.argb(0x90, 0xFFFFFF));
+        forceSamples = 1;
+        try {
+            for (int i = 0; i < 7; i++) {
+                long seed = i * 2654435761L;
+                double fx = ((seed >> 3) & 1023) / 1023.0;
+                int size = 6 + (int) ((seed >> 13) & 3) * 2;
+                double speed = 6 + ((seed >> 7) & 15);
+                double cycle = h + size * 2;
+                double yy = cycle - ((t * speed + ((seed >> 17) & 255)) % cycle);
+                int bx = x + 4 + (int) (fx * (w - size - 8)) + (int) (Math.sin(t * 0.8 + i) * 3);
+                int by = y + (int) yy - size;
+                if (by < y + 1 || by + size > y + h - 1) continue;
+                rrect(g, bx, by, size, size, size / 2, Theme.argb(0x16, 0xFFFFFF), Theme.argb(0x70, 0xFFFFFF), 1);
+            }
+        } finally {
+            forceSamples = 0;
         }
     }
 }

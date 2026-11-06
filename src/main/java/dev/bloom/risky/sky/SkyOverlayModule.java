@@ -14,6 +14,7 @@ import net.minecraft.client.gui.GuiGraphics;
  */
 public final class SkyOverlayModule extends Module implements Overlay {
     private final Setting.Mode style = add(new Setting.Mode("style", "Style", 0, SkyArt.STYLES));
+    private final Setting.Mode detail = add(new Setting.Mode("detail", "Detail (FPS)", 0, SkyArt.DETAILS));
     private final Setting.Num intensity = add(new Setting.Num("intensity", "Intensity", 0.2, 1.5, 0.05, 0.8));
     private final Setting.Num speed = add(new Setting.Num("speed", "Speed", 0.2, 3.0, 0.1, 1.0));
     private final Setting.Num fov = add(new Setting.Num("fov", "Your FOV", 30, 130, 1, 70));
@@ -38,6 +39,6 @@ public final class SkyOverlayModule extends Module implements Overlay {
         if (mc.player == null || mc.level == null) return;
         if (outdoors.value && !mc.level.canSeeSky(mc.player.blockPosition())) return;
         SkyArt.draw(g, gw, gh, mc.player.getYRot(), mc.player.getXRot(), fov.value, style.index,
-                intensity.value, skyTime, stars.value, glow.value, veil.value, Theme.accent);
+                intensity.value, skyTime, stars.value, glow.value, veil.value, Theme.accent, detail.index);
     }
 }

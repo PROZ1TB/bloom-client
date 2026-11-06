@@ -70,6 +70,7 @@ public class BloomScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
         ed.update();
+        Ui.beginFrame();
         boolean click = ed.pressed(0), rclick = ed.pressed(1), down = ed.down(0);
 
         // The menu floats in the middle of the game at about 60% of the screen and grows in when opened.
@@ -96,11 +97,8 @@ public class BloomScreen extends Screen {
     private void drawMenu(GuiGraphics g, int mx, int my, boolean click, boolean rclick, boolean down) {
         int pw = VW, ph = VH, px = 0, py = 0;
 
-        // soft glow around the panel (hollow rings, so nothing overlaps the panel itself)
-        int glowRgb = Theme.glass ? 0xBFEAFF : Theme.accent;
-        for (int k = 1; k <= 5; k++) {
-            Ui.ring(g, px - k, py - k, pw + 2 * k, ph + 2 * k, Theme.radius + 3 + k, Theme.argb(0x30 - k * 6, glowRgb), 1);
-        }
+        // soft glow around the panel (one hollow ring: cheap, and nothing overlaps the panel itself)
+        Ui.ringCheap(g, px - 2, py - 2, pw + 4, ph + 4, Theme.radius + 5, Theme.argb(0x38, Theme.glass ? 0xBFEAFF : Theme.accent), 1);
         Ui.panel(g, px, py, pw, ph, Theme.radius + 3);
         if (Theme.glass) Ui.bubbles(g, px, py, pw, ph);
         Ui.text(g, "Bloom", px + 12, py + 9, Theme.ACCENT);
@@ -311,6 +309,11 @@ public class BloomScreen extends Screen {
         boolean skh = Ui.in(mx, my, cx + 110, y, 80, 16);
         Ui.button(g, cx + 110, y, 80, 16, SkyArt.STYLES[sk], skh);
         if (click && skh) Config.put("menu.sky", Integer.toString((sk + 1) % SkyArt.STYLES.length));
+        y += 22;
+        Ui.text(g, "Style all game buttons", cx, y + 1, Theme.TEXT);
+        boolean skinOn = Config.getBool("ui.skin", true);
+        Ui.toggle(g, cx + 130, y, skinOn);
+        if (click && Ui.in(mx, my, cx + 126, y - 3, 30, 17)) Config.put("ui.skin", Boolean.toString(!skinOn));
     }
 
     private void typeHex() {
