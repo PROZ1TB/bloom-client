@@ -1,24 +1,34 @@
-# Bloom Client (Stage 1)
+# Payment Alerts (Fabric, Minecraft 1.21.11)
 
-Fabric client mod for Minecraft 1.21.11.
+Client-side mod. When a server message like `cobhaa paid you $10M.` arrives, it plays an animated alert
+based on the amount (all drawn on the HUD, no resource pack needed):
 
-## Build it (GitHub, like your other mods)
-1. Make a new GitHub repo (for example `bloom-client`).
-2. Upload everything in this folder to it (keep the `.github` folder, `src`, `build.gradle`, `gradle.properties`, `settings.gradle`).
-3. Open the **Actions** tab. The `build` workflow runs on its own. When it is green, open the run and download the **bloom-client** artifact. The jar is inside.
-4. Put the jar in your mods folder (Fabric API is required).
+| Amount | Effect |
+|---|---|
+| $10M | Skin-tab toast, head does a crouch dance (4 styles) |
+| $50M | Money rain (bills / gold bars / gems / mixed) + gold tab |
+| $100M | Fireworks (classic / gold / rainbow / hearts) + name card |
+| $250M | Lightning storm (blue / purple / red / gold) |
+| $500M | Slot-machine jackpot (6 winning symbols) + coins + fireworks |
+| $1B | Nuke (classic / radioactive / plasma / hellfire) |
+| $5B | Orbital laser (cyan / red death ray / purple / gold / green) |
+| $10B | Black hole -> new universe (4 colours) |
+| $100B | God tier (gold / diamond / emerald / netherite) |
 
-If the build fails while *resolving* `loom_version`, `loader_version` or `fabric_version`, open the working `gradle.properties` from your auctiontracker repo and copy those three lines here.
-If it fails with a Java error, copy the red error lines and send them over; they point at the exact line.
+Highest tier whose minimum is reached is used. Big effects queue one after another; toasts stack.
 
-## Using it
-* **Right Shift** opens the Bloom menu (rebind it in Controls > Bloom Client).
-* **Modules** tab: toggle modules, click a module to open its settings. **HUD Editor** lets you drag modules around.
-* **Theme** tab: accent colors, **Glass** (first swatch: clear and bubbly, applies to the whole menu and HUD), hex box, favorites, corner roundness.
-* **Lyrics** tab: put `song.lrc` (timed lyrics) and optionally `song.wav` in `.minecraft/config/bloom/songs/`, pick the song, press Play, and turn on **Lyrics in the Air** (or use the toggle in that tab).
+## Build the .jar with GitHub
+1. Create a new GitHub repo and upload everything in this folder (keep the `.github` folder).
+2. Open the **Actions** tab -> the `build` workflow runs on push (or press *Run workflow*).
+3. When it finishes, open the run and download the **payment-alerts-jar** artifact. Inside is `payment-alerts-1.0.0.jar`.
+4. Put it in `.minecraft/mods` with Fabric Loader 0.18+ and **Fabric API** for 1.21.11.
 
-## Modules in this stage
-Watermark, FPS, CPS, Keystrokes, Coordinates, Direction, Clock, Playtime, Memory, Speed, Ping, Server, Held Item, Potion Status, Armor Status, Toggle Sprint, Lyrics in the Air.
+## Commands (client side)
+- `/payalert demo` – queue every tier
+- `/payalert test <amount> [variation 1-6] [player]` – e.g. `/payalert test 500M 3`
+- `/payalert toggle`, `/payalert clear`
 
-## Not in this stage yet
-Main menu with the walking character, the aurora sky, glowing glass player outlines, Spotify connection, in-world 3D lyrics.
+## Config: `config/paymentalerts.json`
+- `pattern` – regex; group 1 = player, group 2 = number, group 3 = K/M/B/T. Change it if your server words the message differently.
+- `listenToChat` – false by default so players can't fake alerts by typing in chat.
+- `sounds`, `enabled`.

@@ -1,16 +1,15 @@
 {
   "schemaVersion": 1,
-  "id": "bloomclient",
+  "id": "paymentalerts",
   "version": "${version}",
-  "name": "Bloom Client",
-  "description": "Bloom Client: a themeable client GUI with a Glass color, HUD modules, and Lyrics in the Air.",
-  "authors": ["Bloom"],
+  "name": "Payment Alerts",
+  "description": "Big animated on-screen alerts when another player pays you money ($10M up to $100B).",
+  "authors": ["You"],
   "license": "MIT",
   "environment": "client",
   "entrypoints": {
-    "client": ["dev.bloom.BloomClient"]
+    "client": ["com.paymentalerts.PaymentAlertsClient"]
   },
-  ${mixinsLine}
   "depends": {
     "fabricloader": ">=0.18.0",
     "minecraft": "~1.21.11",
